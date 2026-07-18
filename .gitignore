@@ -1,2 +1,4 @@
 data/
 .venv/
+.pytest_cache/
+pytest-cache-files-*/
