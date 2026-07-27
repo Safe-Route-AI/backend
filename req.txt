@@ -1,0 +1,64 @@
+# ==========================
+# Flask Backend API
+# ==========================
+Flask
+Flask-Cors
+gunicorn
+
+# ==========================
+# MongoDB
+# ==========================
+pymongo
+dnspython
+
+# ==========================
+# OpenStreetMap / OSRM / GIS
+# ==========================
+osmnx
+networkx
+geopandas
+shapely
+pyproj
+rtree
+geopy
+
+# HTTP client for OSRM API
+requests
+
+# ==========================
+# YOLO Object Detection
+# ==========================
+ultralytics
+torch
+torchvision
+
+# ==========================
+# Computer Vision
+# ==========================
+opencv-python
+numpy
+Pillow
+
+# ==========================
+# Data Processing
+# ==========================
+pandas
+scipy
+matplotlib
+
+# ==========================
+# Configuration
+# ==========================
+python-dotenv
+PyYAML
+
+# ==========================
+# Utilities
+# ==========================
+tqdm
+
+# ==========================
+# Development
+# ==========================
+pytest
+black

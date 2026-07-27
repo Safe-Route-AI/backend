@@ -1,10 +1,18 @@
 """Tests for src.utils.lookup.get_street_name and location_to_street (4.2, 4.3)."""
 
 import unittest
+from unittest.mock import patch
 
 import networkx as nx
+# pyrefly: ignore [missing-import]
+import pytest
 
-from src.utils.lookup import get_street_name, location_to_street
+from src.utils.lookup import (
+    get_street_name,
+    location_to_street,
+    get_pois,
+    coords_to_street,
+)
 
 
 def _build_synthetic_graph() -> nx.MultiDiGraph:
@@ -63,6 +71,88 @@ class TestLocationToStreet(unittest.TestCase):
     def test_invalid_coordinates_raise(self):
         with self.assertRaises(ValueError):
             location_to_street(self.graph, 999, 31.23)
+
+
+# Shahd part (get_pois, coords_to_street)
+
+class TestGetPois(unittest.TestCase):
+    """
+    Fast unit test: mocks the OSM network call.
+    Run the real network version with:  pytest --slow
+    """
+
+    @patch("src.utils.lookup.ox.features.features_from_point")
+    def test_get_pois_returns_dict_with_expected_keys(self, mock_features):
+        import pandas as pd
+
+        # Return a minimal GeoDataFrame with one police entry
+        mock_features.return_value = pd.DataFrame(
+            {"amenity": ["police"], "railway": [None]}
+        )
+
+        pois = get_pois(30.0444, 31.2357)
+
+        self.assertIsInstance(pois, dict)
+        self.assertIn("hospital", pois)
+        self.assertIn("restaurant", pois)
+        self.assertIn("police", pois)
+        self.assertIn("metro", pois)
+        self.assertIn("pharmacy", pois)
+
+    def test_invalid_coordinates_raise(self):
+        with self.assertRaises(ValueError):
+            get_pois(999, 31.23)
+
+
+@pytest.mark.slow
+class TestGetPoisIntegration(unittest.TestCase):
+    """Real network call – skipped by default. Run with: pytest --slow"""
+
+    def test_get_pois_real(self):
+        pois = get_pois(30.0444, 31.2357)
+        self.assertIsInstance(pois, dict)
+        self.assertIn("hospital", pois)
+        self.assertIn("restaurant", pois)
+        self.assertIn("police", pois)
+        self.assertIn("metro", pois)
+        self.assertIn("pharmacy", pois)
+
+
+class TestCoordsToStreet(unittest.TestCase):
+    """
+    Fast unit tests: mock load_graph so we never touch the 310 MB GraphML.
+    Run the real disk version with:  pytest --slow
+    """
+
+    def setUp(self):
+        self.synthetic_graph = _build_synthetic_graph()
+
+    @patch("src.utils.lookup.load_graph")
+    def test_coords_to_street_returns_string(self, mock_load):
+        mock_load.return_value = self.synthetic_graph
+        street = coords_to_street(30.0405, 31.2305)
+        self.assertIsInstance(street, str)
+        self.assertTrue(len(street) > 0)
+
+    @patch("src.utils.lookup.load_graph")
+    def test_coords_to_street_known_location(self, mock_load):
+        mock_load.return_value = self.synthetic_graph
+        street = coords_to_street(30.0405, 31.2305)
+        self.assertEqual(street, "Tahrir Street")
+
+    def test_invalid_coordinates_raise(self):
+        with self.assertRaises(ValueError):
+            coords_to_street(100, 31.23)
+
+
+@pytest.mark.slow
+class TestCoordsToStreetIntegration(unittest.TestCase):
+    """Real disk load – skipped by default. Run with: pytest --slow"""
+
+    def test_coords_to_street_real(self):
+        street = coords_to_street(30.0444, 31.2357)
+        self.assertIsInstance(street, str)
+        self.assertTrue(len(street) > 0)
 
 
 if __name__ == "__main__":
