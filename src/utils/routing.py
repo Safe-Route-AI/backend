@@ -97,4 +97,46 @@ def _to_min_weight_simple_graph(graph: nx.MultiDiGraph, weight: str) -> nx.DiGra
             simple.add_edge(u, v, **data)
     return simple
 
+"""
+src/utils/routing.py
+(get_k_shortest_paths already implemented above)
+Travel Time Estimation (4.11) & Path-to-Segment Enumeration (4.12)
+"""
 
+DEFAULT_WALK_SPEED_MPS = 1.4  # average pedestrian walking speed
+
+
+def get_travel_time(graph, path_nodes, speed_mps=DEFAULT_WALK_SPEED_MPS):
+    """
+    Estimate walking travel time (in minutes) for a route given as a
+    sequence of node IDs, by summing edge 'length' attributes.
+    """
+    if len(path_nodes) < 2:
+        return 0.0
+
+    total_length_m = 0.0
+    for u, v in zip(path_nodes[:-1], path_nodes[1:]):
+        edge_data = graph.get_edge_data(u, v)
+        if edge_data is None:
+            continue
+        first_edge = edge_data[0] if 0 in edge_data else next(iter(edge_data.values()))
+        total_length_m += first_edge.get("length", 0)
+
+    travel_time_seconds = total_length_m / speed_mps
+    return travel_time_seconds / 60.0
+
+
+def path_to_segments(graph, path_nodes):
+    """
+    Convert a node-ID path into an ordered list of (u, v, edge_data)
+    tuples. This is the bridge between routing output and the
+    Context/Community/Environment modules.
+    """
+    segments = []
+    for u, v in zip(path_nodes[:-1], path_nodes[1:]):
+        edge_data = graph.get_edge_data(u, v)
+        if edge_data is None:
+            continue
+        first_edge = edge_data[0] if 0 in edge_data else next(iter(edge_data.values()))
+        segments.append((u, v, first_edge))
+    return segments
