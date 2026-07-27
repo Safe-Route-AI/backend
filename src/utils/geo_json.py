@@ -40,7 +40,7 @@ def paths_to_geojson(
                 "type": "LineString",
                 "coordinates": coordinates,
             },
-            "properties": {},
+            "properties": {"path_length": len(path)},
         }
 
         features.append(feature)
