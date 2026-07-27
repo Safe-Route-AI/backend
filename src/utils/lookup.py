@@ -1,20 +1,24 @@
+from __future__ import annotations
 """
 
 Map and Geospatial Utilities - name/POI lookup functions.
 
     4.2  get_street_name(edge_data)             <- implemented here
     4.3  location_to_street(graph, lat, lon)    <- implemented here
-    4.6  get_pois(lat, lon, radius_m)           <- belongs in this file
+    4.6  get_pois(lat, lon, radius_m)           <- implemented here
+    4.7 coords_to_street(lat, lon)              <- implemented here
 """
-
-from __future__ import annotations
 
 import logging
 
 import networkx as nx
+# pyrefly: ignore [missing-import]
 import osmnx as ox
+from src.utils.caching import load_graph
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_PLACE = "Cairo, Egypt"
 
 
 # --------------------------------------------------------------------------
@@ -94,4 +98,95 @@ def _validate_lat_lon(lat: float, lon: float) -> None:
     if not (-180 <= lon <= 180):
         raise ValueError(f"longitude {lon} out of range [-180, 180]")
 
+# --------------------------------------------------------------------------
+# 4.6 Points of Interest Lookup
+# --------------------------------------------------------------------------
+def get_pois(
+    lat: float,
+    lon: float,
+    radius_m: int = 300,
+) -> dict[str, int]:
+    """
+    Retrieve nearby points of interest around a coordinate.
+
+    Searches OpenStreetMap for nearby points of interest within the given
+    radius and returns the number of police stations, hospitals,
+    restaurants, metro stations, and pharmacies.
+
+    Args:
+        lat: Latitude of the query point.
+        lon: Longitude of the query point.
+        radius_m: Search radius in metres (default 300 m).
+
+    Returns:
+        A dictionary containing POI counts grouped by category.
+
+    Raises:
+        ValueError: If the coordinates are invalid.
+    """
+    _validate_lat_lon(lat, lon)
+
+    tags = {
+        "amenity": [
+            "police",
+            "hospital",
+            "restaurant",
+            "pharmacy",
+        ],
+        "railway": ["station"],
+    }
+
+    pois = ox.features.features_from_point(
+        (lat, lon),
+        tags=tags,
+        dist=radius_m,
+    )
+
+    counts = {
+        "police": 0,
+        "hospital": 0,
+        "restaurant": 0,
+        "metro": 0,
+        "pharmacy": 0,
+    }
+
+    if pois.empty:
+        return counts
+
+    if "amenity" in pois.columns:
+        counts["police"] = (pois["amenity"] == "police").sum()
+        counts["hospital"] = (pois["amenity"] == "hospital").sum()
+        counts["restaurant"] = (pois["amenity"] == "restaurant").sum()
+        counts["pharmacy"] = (pois["amenity"] == "pharmacy").sum()
+
+    if "railway" in pois.columns:
+        counts["metro"] = (pois["railway"] == "station").sum()
+
+    return counts
+    
+# --------------------------------------------------------------------------
+# 4.7   Coordinate-to-Street-Name Mapping
+# --------------------------------------------------------------------------
+
+def coords_to_street(lat: float, lon: float) -> str:
+    """
+    Map an arbitrary coordinate pair to the nearest street name.
+
+    This is a convenience wrapper around location_to_street(). It loads
+    the cached road graph and returns the human-readable name of the
+    nearest road segment to the given coordinates.
+
+    Args:
+        lat: Latitude of the query point.
+        lon: Longitude of the query point.
+
+    Returns:
+        The name of the nearest street.
+
+    Raises:
+        ValueError: If the coordinates are invalid.
+    """
+    _validate_lat_lon(lat, lon)
+    graph = load_graph(DEFAULT_PLACE)
+    return location_to_street(graph, lat, lon)
 

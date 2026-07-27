@@ -2,3 +2,17 @@ data/
 .venv/
 .pytest_cache/
 pytest-cache-files-*/
+
+# Generated graph files — too large for GitHub (300MB+)
+graphs/
+
+# OSMnx query cache
+cache/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment files
+.env
